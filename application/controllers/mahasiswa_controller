@@ -1,0 +1,56 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class Mahasiswa extends CI_Controller {
+
+    public function __construct() {
+        parent::__construct();
+        $this->load->model('mahasiswa_model');
+        $this->load->model('alat_model');
+        $this->load->model('booking_model');
+        $this->load->library('form_validation');
+        
+        // Cek apakah user sudah login dan role-nya mahasiswa
+        if (!$this->session->userdata('logged_in') || $this->session->userdata('role') != 'mahasiswa') {
+            redirect('auth/login');
+        }
+    }
+
+    public function index() {
+        redirect('mahasiswa/dashboard');
+    }
+
+    // Dashboard mahasiswa
+    public function dashboard() {
+        $data['title'] = 'Dashboard Mahasiswa';
+        $data['booking'] = $this->booking_model->get_by_mahasiswa($this->session->userdata('id_mahasiswa'));
+        
+        $this->load->view('templates/mahasiswa_header', $data);
+        $this->load->view('mahasiswa/dashboard', $data);
+        $this->load->view('templates/mahasiswa_footer');
+    }
+
+    // Halaman daftar alat yang tersedia
+    public function alat() {
+        $data['title'] = 'Daftar Alat Tersedia';
+        $data['alat'] = $this->alat_model->get_all();
+        
+        $this->load->view('templates/mahasiswa_header', $data);
+        $this->load->view('mahasiswa/alat_list', $data);
+        $this->load->view('templates/mahasiswa_footer');
+    }
+
+    // Form booking alat
+    public function booking($id_alat = null) {
+        // Validasi id_alat jika ada
+        if ($id_alat) {
+            $alat = $this->alat_model->get_by_id($id_alat);
+            if (!$alat) {
+                $this->session->set_flashdata('error', 'Alat tidak ditemukan!');
+                redirect('mahasiswa/alat');
+            }
+        }
+        
+        $this->form_validation->set_rules('id_alat', 'Alat', 'required');
+        $this->form_validation->set_rules('tanggal_pinjam', 'Tanggal Pinjam', 'required');
+        $this->form_validation->set_rules('tanggal_kembali', 'Tanggal K

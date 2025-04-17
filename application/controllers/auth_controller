@@ -1,0 +1,135 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class Auth extends CI_Controller {
+
+    public function __construct() {
+        parent::__construct();
+        $this->load->model('mahasiswa_model');
+        $this->load->model('admin_model');
+        $this->load->library('form_validation');
+    }
+
+    public function index() {
+        redirect('auth/login');
+    }
+
+    // Login untuk mahasiswa
+    public function login() {
+        // Jika sudah login, redirect ke halaman yang sesuai
+        if ($this->session->userdata('logged_in')) {
+            if ($this->session->userdata('role') == 'admin') {
+                redirect('admin/dashboard');
+            } else {
+                redirect('mahasiswa/dashboard');
+            }
+        }
+        
+        $this->form_validation->set_rules('nim', 'NIM', 'required|trim');
+        $this->form_validation->set_rules('password', 'Password', 'required|trim');
+        
+        if ($this->form_validation->run() == FALSE) {
+            $data['title'] = 'Login Mahasiswa';
+            $this->load->view('auth/login', $data);
+        } else {
+            $nim = $this->input->post('nim');
+            $password = $this->input->post('password');
+            
+            $mahasiswa = $this->mahasiswa_model->login($nim, $password);
+            
+            if ($mahasiswa) {
+                $data = array(
+                    'id_mahasiswa' => $mahasiswa->id_mahasiswa,
+                    'nim' => $mahasiswa->nim,
+                    'nama' => $mahasiswa->nama,
+                    'role' => 'mahasiswa',
+                    'logged_in' => TRUE
+                );
+                
+                $this->session->set_userdata($data);
+                redirect('mahasiswa/dashboard');
+            } else {
+                $this->session->set_flashdata('error', 'NIM atau Password salah!');
+                redirect('auth/login');
+            }
+        }
+    }
+
+    // Login untuk admin
+    public function admin_login() {
+        // Jika sudah login, redirect ke halaman yang sesuai
+        if ($this->session->userdata('logged_in')) {
+            if ($this->session->userdata('role') == 'admin') {
+                redirect('admin/dashboard');
+            } else {
+                redirect('mahasiswa/dashboard');
+            }
+        }
+        
+        $this->form_validation->set_rules('username', 'Username', 'required|trim');
+        $this->form_validation->set_rules('password', 'Password', 'required|trim');
+        
+        if ($this->form_validation->run() == FALSE) {
+            $data['title'] = 'Login Admin';
+            $this->load->view('auth/admin_login', $data);
+        } else {
+            $username = $this->input->post('username');
+            $password = $this->input->post('password');
+            
+            $admin = $this->admin_model->login($username, $password);
+            
+            if ($admin) {
+                $data = array(
+                    'id_admin' => $admin->id_admin,
+                    'username' => $admin->username,
+                    'nama' => $admin->nama,
+                    'role' => 'admin',
+                    'logged_in' => TRUE
+                );
+                
+                $this->session->set_userdata($data);
+                redirect('admin/dashboard');
+            } else {
+                $this->session->set_flashdata('error', 'Username atau Password salah!');
+                redirect('auth/admin_login');
+            }
+        }
+    }
+
+    // Fungsi logout
+    public function logout() {
+        $this->session->sess_destroy();
+        redirect('auth/login');
+    }
+
+    // Register untuk mahasiswa
+    public function register() {
+        $this->form_validation->set_rules('nim', 'NIM', 'required|trim|is_unique[mahasiswa.nim]');
+        $this->form_validation->set_rules('nama', 'Nama', 'required|trim');
+        $this->form_validation->set_rules('email', 'Email', 'required|trim|valid_email');
+        $this->form_validation->set_rules('prodi', 'Program Studi', 'required|trim');
+        $this->form_validation->set_rules('password', 'Password', 'required|trim|min_length[6]');
+        $this->form_validation->set_rules('password_confirm', 'Konfirmasi Password', 'required|trim|matches[password]');
+        
+        if ($this->form_validation->run() == FALSE) {
+            $data['title'] = 'Register Mahasiswa';
+            $this->load->view('auth/register', $data);
+        } else {
+            $data = array(
+                'nim' => $this->input->post('nim'),
+                'nama' => $this->input->post('nama'),
+                'email' => $this->input->post('email'),
+                'prodi' => $this->input->post('prodi'),
+                'password' => $this->input->post('password')
+            );
+            
+            if ($this->mahasiswa_model->insert($data)) {
+                $this->session->set_flashdata('success', 'Registrasi berhasil! Silakan login.');
+                redirect('auth/login');
+            } else {
+                $this->session->set_flashdata('error', 'Registrasi gagal! Silakan coba lagi.');
+                redirect('auth/register');
+            }
+        }
+    }
+}
